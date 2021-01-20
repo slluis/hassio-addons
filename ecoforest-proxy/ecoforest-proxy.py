@@ -106,6 +106,8 @@ else:
 
 class EcoforestServer(BaseHTTPRequestHandler):
 
+    current_hp_data = {}
+
     def send(self, response):
         try:
             self.send_response(200)
@@ -228,27 +230,20 @@ class EcoforestServer(BaseHTTPRequestHandler):
         return reply
 
     def ecoforest_stats_heatpump(self):
-        reply = {}
-        self.ecoforest_query_registers(reply, 2001, 61, 25)
-        self.ecoforest_query_registers(reply, 2001, 101, 97)
-        self.ecoforest_query_registers(reply, 2001, 206, 45)
-        self.ecoforest_query_registers(reply, 2002, 5033, 2)
-        self.ecoforest_query_registers(reply, 2002, 5066, 18)
-        self.ecoforest_query_registers(reply, 2002, 5113, 31)
-        self.ecoforest_query_registers(reply, 2002, 5185, 27)
-        self.ecoforest_query_registers(reply, 2002, 5241, 34)
-        self.ecoforest_query_registers(reply, 2002, 5285, 12)
-        self.ecoforest_query_registers(reply, 2002, 1, 39)
-        self.ecoforest_query_registers(reply, 2002, 40, 19)
-        self.ecoforest_query_registers(reply, 2002, 97, 30)
-        self.ecoforest_query_registers(reply, 2002, 176, 29)
-        self.ecoforest_query_registers(reply, 2002, 214, 7)
-        return reply
+        # Status registers:
+        # digital: 105
+        # numbers: 5082, 5083, 97, 3, 11, 8
 
-    def ecoforest_query_registers(self,dict,oper,ini,num):
+        self.ecoforest_query_registers(2001, 105, 1)
+        self.ecoforest_query_registers(2002, 5082, 2)
+        self.ecoforest_query_registers(2002, 1, 12)
+        self.ecoforest_query_registers(2002, 97, 1)
+        return EcoforestServer.current_hp_data
+
+    def ecoforest_query_registers(self,oper,ini,num):
+        dict = EcoforestServer.current_hp_data
         stats = self.ecoforest_call('idOperacion=' + str(oper) + '&dir=' + str(ini) + '&num=' + str(num))
         lines = stats.text.split('\n')
-        result = lines[0].split('=')[0]
         data = lines[1].split('&')
         heat_pump_registers = heat_pump_registers_2001 if oper == 2001 else heat_pump_registers_2002
         for i in range(2,len(data)):
@@ -269,11 +264,30 @@ class EcoforestServer(BaseHTTPRequestHandler):
         else:
             return 0
 
-    def set_heating_status(self, status):
-        if status == "on":
-            self.ecoforest_call('idOperacion=2011&num=1&1')
-        elif status == "off":
-            self.ecoforest_call('idOperacion=2011&num=1&0')
+    def get_status_value(self,attribute):
+        if attribute in EcoforestServer.current_hp_data:
+            return EcoforestServer.current_hp_data[attribute]
+        else:
+            return None
+
+    def heating_status(self, status=None):
+        self.ecoforest_query_registers(2001, 105, 1)
+        current_status = 'on' if self.get_status_value('heating_status') == 1 else 'off'
+        if status:
+            if status == "on" and current_status == 'off':
+                logging.info('Heater enabled')
+                self.ecoforest_call('idOperacion=2011&dir=105&num=1&1')
+            elif status == "off" and current_status == 'on':
+                logging.info('Heater disabled')
+                self.ecoforest_call('idOperacion=2011&dir=105&num=1&0')
+            current_status = status
+        self.send({'status':current_status})
+
+    def get_heating_status(self):
+        stats = self.ecoforest_stats()
+        self.send(stats['state'])
+
+
 
     # queries the ecoforest server with the supplied contents and parses the results into JSON
     def ecoforest_call(self, body):
@@ -325,7 +339,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/fullstats': self.stats,
             '/ecoforest/status': self.get_status,
             '/ecoforest/set_status': self.set_status,
-            '/ecoforest/set_heating_status': self.set_heating_status,
+            '/ecoforest/heating_status': self.heating_status,
             '/ecoforest/set_temp': self.set_temp,
             '/ecoforest/set_power': self.set_power,
         }
