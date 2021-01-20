@@ -346,7 +346,7 @@ if __name__ == '__main__':
     try:
         from http.server import HTTPServer
         server = HTTPServer(('', DEFAULT_PORT), EcoforestServer)
-        logging.info('Ecoforest proxy server has started.')
+        logging.info('Ecoforest proxy server has started (' + heatertype + ')')
         server.serve_forever()
     except Exception as e:
         logging.error(e)
