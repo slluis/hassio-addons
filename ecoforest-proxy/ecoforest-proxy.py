@@ -264,22 +264,51 @@ class EcoforestServer(BaseHTTPRequestHandler):
         else:
             return 0
 
-    def get_status_value(self,attribute):
+    def convert_to_register_value(self,value,rtype):
+        if rtype == REGISTER_TYPE_DIGITAL:
+            return str(value)
+        elif rtype == REGISTER_TYPE_INTEGER:
+            return hex(value if value >=0 else value + 65536)
+        elif rtype == REGISTER_TYPE_ANALOG:
+            return hex((value*10) if value >=0 else (value + 65536*10))
+
+    def get_status_value(self,attribute,fetch=True):
+        if fetch:
+            oper,regid,rtype = self.get_attribute_data(attribute)
+            self.ecoforest_query_registers(oper, regid, 1)
         if attribute in EcoforestServer.current_hp_data:
             return EcoforestServer.current_hp_data[attribute]
         else:
             return None
 
-    def heating_status(self, status=None):
-        self.ecoforest_query_registers(2001, 105, 1)
+    def set_status_value(self,attribute,value):
+        oper,regid,rtype = self.get_attribute_data(attribute)
+        sval = self.convert_to_register_value(value,rtype)
+        result = self.ecoforest_call('idOperacion=' + str(oper + 10) + '&dir=' + str(regid) + '&num=1&' + sval)
+        lines = result.text.split('\n')
+        if int(lines[1]) >= 0:
+            EcoforestServer.current_hp_data[attribute] = value
+
+    def get_attribute_data(self,attribute):
+        for regid in heat_pump_registers_2001:
+            if heat_pump_registers_2001[regid]['id'] == attribute:
+                return 2001, regid, heat_pump_registers_2001[regid]['t']
+        for regid in heat_pump_registers_2002:
+            if heat_pump_registers_2002[regid]['id'] == attribute:
+                return 2002, regid, heat_pump_registers_2001[regid]['t']
+        return None,None
+
+    def heating_status(self, post_body=None):
         current_status = 'on' if self.get_status_value('heating_status') == 1 else 'off'
-        if status:
+        if post_body:
+            data = json.loads(post_body.decode('utf-8'))
+            status = data['status']
             if status == "on" and current_status == 'off':
                 logging.info('Heater enabled')
-                self.ecoforest_call('idOperacion=2011&dir=105&num=1&1')
+                self.set_status_value('heating_status', 1)
             elif status == "off" and current_status == 'on':
                 logging.info('Heater disabled')
-                self.ecoforest_call('idOperacion=2011&dir=105&num=1&0')
+                self.set_status_value('heating_status', 0)
             current_status = status
         self.send({'status':current_status})
 
@@ -308,12 +337,13 @@ class EcoforestServer(BaseHTTPRequestHandler):
         if parsed_path.query:
             args = dict(qc.split("=") for qc in parsed_path.query.split("&"))
 
-        if DEBUG: logging.debug('GET: TARGET URL: %s, %s' % (parsed_path.path, parsed_path.query))
-        content_len = int(self.headers.getheader('content-length', 0))
+        if DEBUG: logging.debug('POST: TARGET URL: %s, %s' % (parsed_path.path, parsed_path.query))
+        content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
 
         dispatch = {
             '/ecoforest/status': self.set_status,
+            '/ecoforest/heating_status': self.heating_status,
         }
 
         # API calls
@@ -339,9 +369,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/fullstats': self.stats,
             '/ecoforest/status': self.get_status,
             '/ecoforest/set_status': self.set_status,
-            '/ecoforest/heating_status': self.heating_status,
             '/ecoforest/set_temp': self.set_temp,
             '/ecoforest/set_power': self.set_power,
+            '/ecoforest/heating_status': self.heating_status,
         }
 
         # API calls
