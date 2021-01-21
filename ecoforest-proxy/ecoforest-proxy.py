@@ -36,13 +36,13 @@ heat_pump_registers_2001 = {
 }
 
 heat_pump_registers_2002 = {
-    1: { 'id':'heating_outlet_temperature', 't':REGISTER_TYPE_ANALOG },
-    2: { 'id':'heating_inlet_temperature', 't':REGISTER_TYPE_ANALOG },
+    1: { 'id':'brine_outlet_temperature', 't':REGISTER_TYPE_ANALOG },
+    2: { 'id':'brine_inlet_temperature', 't':REGISTER_TYPE_ANALOG },
     3: { 'id':'heating_real_temperature_1', 't':REGISTER_TYPE_ANALOG },
-    4: { 'id':'outlet_heating_temperature', 't':REGISTER_TYPE_ANALOG },
+    4: { 'id':'production_inlet_temperature', 't':REGISTER_TYPE_ANALOG },
     8: { 'id':'dhw_temperature', 't':REGISTER_TYPE_ANALOG },
-    13: { 'id':'pcp_a', 't':REGISTER_TYPE_ANALOG },
-    14: { 'id':'pcc_a', 't':REGISTER_TYPE_ANALOG },
+    13: { 'id':'brine_circuit_pressure', 't':REGISTER_TYPE_ANALOG },
+    14: { 'id':'production_circuit_pressure', 't':REGISTER_TYPE_ANALOG },
     15: { 'id':'offset', 't':REGISTER_TYPE_ANALOG },
     19: { 'id':'imp_pool', 't':REGISTER_TYPE_ANALOG },
     11: { 'id':'outdoor_temperature', 't':REGISTER_TYPE_ANALOG },
@@ -80,8 +80,8 @@ heat_pump_registers_2002 = {
     216: { 'id':'set_inercia_cool', 't':REGISTER_TYPE_ANALOG },
     214: { 'id':'consigna_acs', 't':REGISTER_TYPE_ANALOG },
     202: { 'id':'eer_value', 't':REGISTER_TYPE_ANALOG },
-    5033: { 'id':'reg_bc_a', 't':REGISTER_TYPE_ANALOG },
-    5034: { 'id':'reg_bp_a', 't':REGISTER_TYPE_ANALOG },
+    5033: { 'id':'production_pump_adjustment', 't':REGISTER_TYPE_ANALOG },
+    5034: { 'id':'brine_pump_adjustment', 't':REGISTER_TYPE_ANALOG },
     5066: { 'id':'heating_set_temperature_2', 't':REGISTER_TYPE_ANALOG },
     5082: { 'id':'electric_energy', 't':REGISTER_TYPE_INTEGER },
     5083: { 'id':'useful_heat_power', 't':REGISTER_TYPE_INTEGER },
@@ -94,7 +94,8 @@ heat_pump_registers_2002 = {
     5271: { 'id':'zone_1_active_demand', 't':REGISTER_TYPE_INTEGER }, # 0=none, 1=heating, 2=refrigerate
     5272: { 'id':'zone_2_active_demand', 't':REGISTER_TYPE_INTEGER }, # 0=none, 1=heating, 2=refrigerate
     5273: { 'id':'zone_3_active_demand', 't':REGISTER_TYPE_INTEGER }, # 0=none, 1=heating, 2=refrigerate
-    5274: { 'id':'zone_4_active_demand', 't':REGISTER_TYPE_INTEGER } # 0=none, 1=heating, 2=refrigerate
+    5274: { 'id':'zone_4_active_demand', 't':REGISTER_TYPE_INTEGER }, # 0=none, 1=heating, 2=refrigerate
+    5290: { 'id':'status', 't':REGISTER_TYPE_INTEGER }, # 0:off, 1:on, 2:alarm
 }
 
 if DEBUG:
@@ -232,12 +233,14 @@ class EcoforestServer(BaseHTTPRequestHandler):
     def ecoforest_stats_heatpump(self):
         # Status registers:
         # digital: 105
-        # numbers: 5082, 5083, 97, 3, 11, 8
+        # numbers: 5033, 5034, 5082, 5083, 97, 1, 2, 3, 4, 8, 11, 13, 14
 
         self.ecoforest_query_registers(2001, 105, 1)
+        self.ecoforest_query_registers(2002, 5033, 2)
         self.ecoforest_query_registers(2002, 5082, 2)
-        self.ecoforest_query_registers(2002, 1, 12)
+        self.ecoforest_query_registers(2002, 1, 14)
         self.ecoforest_query_registers(2002, 97, 1)
+
         return EcoforestServer.current_hp_data
 
     def ecoforest_query_registers(self,oper,ini,num):
