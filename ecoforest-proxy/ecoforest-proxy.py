@@ -237,7 +237,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
         self.ecoforest_query_registers(2001, 105, 1)
         self.ecoforest_query_registers(2001, 206, 6)
-        self.ecoforest_query_registers(2001, 259, 1)
+        self.ecoforest_query_registers(2001, 249, 1)
         self.ecoforest_query_registers(2002, 5033, 2)
         self.ecoforest_query_registers(2002, 5082, 10)
         self.ecoforest_query_registers(2002, 5290, 1)
