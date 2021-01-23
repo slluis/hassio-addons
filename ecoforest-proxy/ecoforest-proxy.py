@@ -23,16 +23,16 @@ REGISTER_TYPE_INTEGER = 2
 REGISTER_TYPE_ANALOG = 3
 
 heat_pump_registers_2001 = {
-    61: { 'id':'estado_piscina', 't':REGISTER_TYPE_DIGITAL },
+    61: { 'id':'pool_status', 't':REGISTER_TYPE_DIGITAL },
     105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
-    208: { 'id':'dhw_heating', 't':REGISTER_TYPE_DIGITAL },
-    209: { 'id':'piscina', 't':REGISTER_TYPE_DIGITAL },
-    206: { 'id':'calefaccion_directa', 't':REGISTER_TYPE_DIGITAL },
-    249: { 'id':'calefaccion_inercia', 't':REGISTER_TYPE_DIGITAL },
-    207: { 'id':'refrigeracion_directa', 't':REGISTER_TYPE_DIGITAL },
-    250: { 'id':'refrigeracion_inercia', 't':REGISTER_TYPE_DIGITAL },
-    210: { 'id':'htr', 't':REGISTER_TYPE_DIGITAL },
-    211: { 'id':'recirc_acs', 't':REGISTER_TYPE_DIGITAL },
+    206: { 'id':'direct_heating', 't':REGISTER_TYPE_DIGITAL },
+    207: { 'id':'direct_cooling', 't':REGISTER_TYPE_DIGITAL },
+    208: { 'id':'dhw_demand', 't':REGISTER_TYPE_DIGITAL },
+    209: { 'id':'pool_demand', 't':REGISTER_TYPE_DIGITAL },
+    210: { 'id':'htr_status', 't':REGISTER_TYPE_DIGITAL },
+    211: { 'id':'dhw_recirculation_status', 't':REGISTER_TYPE_DIGITAL },
+    249: { 'id':'buffer_heating', 't':REGISTER_TYPE_DIGITAL },
+    250: { 'id':'buffer_cooling', 't':REGISTER_TYPE_DIGITAL },
 }
 
 heat_pump_registers_2002 = {
@@ -232,12 +232,15 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     def ecoforest_stats_heatpump(self):
         # Status registers:
-        # digital: 105
-        # numbers: 5033, 5034, 5082, 5083, 97, 1, 2, 3, 4, 8, 11, 13, 14
+        # digital: 105, 206, 208, 210, 211, 249
+        # numbers: 5033, 5034, 5082, 5083, 5290, 97, 1, 2, 3, 4, 8, 11, 13, 14
 
         self.ecoforest_query_registers(2001, 105, 1)
+        self.ecoforest_query_registers(2001, 206, 6)
+        self.ecoforest_query_registers(2001, 259, 1)
         self.ecoforest_query_registers(2002, 5033, 2)
-        self.ecoforest_query_registers(2002, 5082, 2)
+        self.ecoforest_query_registers(2002, 5082, 10)
+        self.ecoforest_query_registers(2002, 5290, 1)
         self.ecoforest_query_registers(2002, 1, 14)
         self.ecoforest_query_registers(2002, 97, 1)
 
