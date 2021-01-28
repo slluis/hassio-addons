@@ -25,6 +25,7 @@ REGISTER_TYPE_ANALOG = 3
 heat_pump_registers_2001 = {
     61: { 'id':'pool_status', 't':REGISTER_TYPE_DIGITAL },
     105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
+    190: { 'id':'dhw_recirculation_enabled', 't':REGISTER_TYPE_DIGITAL },
     206: { 'id':'direct_heating', 't':REGISTER_TYPE_DIGITAL },
     207: { 'id':'direct_cooling', 't':REGISTER_TYPE_DIGITAL },
     208: { 'id':'dhw_demand', 't':REGISTER_TYPE_DIGITAL },
@@ -232,11 +233,11 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     def ecoforest_stats_heatpump(self):
         # Status registers:
-        # digital: 105, 206, 208, 210, 211, 249
+        # digital: 105, 190, 206, 208, 210, 211, 249
         # numbers: 5033, 5034, 5082, 5083, 5290, 97, 1, 2, 3, 4, 8, 11, 13, 14
 
         self.ecoforest_query_registers(2001, 105, 1)
-        self.ecoforest_query_registers(2001, 206, 6)
+        self.ecoforest_query_registers(2001, 190, 22)
         self.ecoforest_query_registers(2001, 249, 1)
         self.ecoforest_query_registers(2002, 5033, 2)
         self.ecoforest_query_registers(2002, 5082, 10)
@@ -305,16 +306,22 @@ class EcoforestServer(BaseHTTPRequestHandler):
         return None,None
 
     def heating_status(self, post_body=None):
-        current_status = 'on' if self.get_status_value('heating_status') == 1 else 'off'
+        self.handle_switch('heating_status', post_body)
+
+    def dhw_recirculation_enabled(self, post_body=None):
+        self.handle_switch('dhw_recirculation_enabled', post_body)
+
+    def handle_switch(self, register, post_body):
+        current_status = 'on' if self.get_status_value(register) == 1 else 'off'
         if post_body:
             data = json.loads(post_body.decode('utf-8'))
             status = data['status']
             if status == "on" and current_status == 'off':
-                logging.info('Heater enabled')
-                self.set_status_value('heating_status', 1)
+                logging.info(register + ' enabled')
+                self.set_status_value(register, 1)
             elif status == "off" and current_status == 'on':
-                logging.info('Heater disabled')
-                self.set_status_value('heating_status', 0)
+                logging.info(register + ' disabled')
+                self.set_status_value(register, 0)
             current_status = status
         self.send({'status':current_status})
 
@@ -350,6 +357,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         dispatch = {
             '/ecoforest/status': self.set_status,
             '/ecoforest/heating_status': self.heating_status,
+            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled
         }
 
         # API calls
@@ -378,6 +386,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/set_temp': self.set_temp,
             '/ecoforest/set_power': self.set_power,
             '/ecoforest/heating_status': self.heating_status,
+            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled
         }
 
         # API calls
