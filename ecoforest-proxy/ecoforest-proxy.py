@@ -44,7 +44,8 @@ heat_pump_registers_2002 = {
     8: { 'id':'dhw_temperature', 't':REGISTER_TYPE_ANALOG },
     13: { 'id':'brine_circuit_pressure', 't':REGISTER_TYPE_ANALOG },
     14: { 'id':'production_circuit_pressure', 't':REGISTER_TYPE_ANALOG },
-    15: { 'id':'offset', 't':REGISTER_TYPE_ANALOG },
+    15: { 'id':'dhw_offset_temperature', 't':REGISTER_TYPE_ANALOG },
+    17: { 'id':'dhw_set_temperature', 't':REGISTER_TYPE_ANALOG },
     19: { 'id':'imp_pool', 't':REGISTER_TYPE_ANALOG },
     11: { 'id':'outdoor_temperature', 't':REGISTER_TYPE_ANALOG },
     22: { 'id':'temp_cal', 't':REGISTER_TYPE_ANALOG },
@@ -116,6 +117,8 @@ class EcoforestServer(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
+            self.wfile.flush()
+            self.wfile.close()
         except:
             self.send_error(500, 'Something went wrong here on the server side.')
 
@@ -242,7 +245,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         self.ecoforest_query_registers(2002, 5033, 2)
         self.ecoforest_query_registers(2002, 5082, 10)
         self.ecoforest_query_registers(2002, 5271, 20)
-        self.ecoforest_query_registers(2002, 1, 14)
+        self.ecoforest_query_registers(2002, 1, 17)
         self.ecoforest_query_registers(2002, 97, 1)
 
         return EcoforestServer.current_hp_data
@@ -277,7 +280,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         elif rtype == REGISTER_TYPE_INTEGER:
             return hex(value if value >=0 else value + 65536)
         elif rtype == REGISTER_TYPE_ANALOG:
-            return hex((value*10) if value >=0 else (value + 65536*10))
+            return format(int(value*10) if value >=0 else int(value * 10) + 65536, '04X')
 
     def get_status_value(self,attribute,fetch=True):
         if fetch:
@@ -302,7 +305,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
                 return 2001, regid, heat_pump_registers_2001[regid]['t']
         for regid in heat_pump_registers_2002:
             if heat_pump_registers_2002[regid]['id'] == attribute:
-                return 2002, regid, heat_pump_registers_2001[regid]['t']
+                return 2002, regid, heat_pump_registers_2002[regid]['t']
         return None,None
 
     def heating_status(self, post_body=None):
@@ -310,6 +313,12 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     def dhw_recirculation_enabled(self, post_body=None):
         self.handle_switch('dhw_recirculation_enabled', post_body)
+
+    def dhw_set_temperature(self, post_body=None):
+        self.handle_sensor('dhw_set_temperature', post_body)
+
+    def dhw_offset_temperature(self, post_body=None):
+        self.handle_sensor('dhw_offset_temperature', post_body)
 
     def handle_switch(self, register, post_body):
         current_status = 'on' if self.get_status_value(register) == 1 else 'off'
@@ -322,6 +331,17 @@ class EcoforestServer(BaseHTTPRequestHandler):
             elif status == "off" and current_status == 'on':
                 logging.info(register + ' disabled')
                 self.set_status_value(register, 0)
+            current_status = status
+        self.send({'status':current_status})
+
+    def handle_sensor(self, register, post_body):
+        current_status = self.get_status_value(register)
+        if post_body:
+            data = json.loads(post_body.decode('utf-8'))
+            status = float(data['status'])
+            if status != float(current_status):
+                logging.info('set ' + register + ' to ' + str(status))
+                self.set_status_value(register, status)
             current_status = status
         self.send({'status':current_status})
 
@@ -357,7 +377,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
         dispatch = {
             '/ecoforest/status': self.set_status,
             '/ecoforest/heating_status': self.heating_status,
-            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled
+            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
+            '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
+            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature
         }
 
         # API calls
@@ -386,7 +408,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/set_temp': self.set_temp,
             '/ecoforest/set_power': self.set_power,
             '/ecoforest/heating_status': self.heating_status,
-            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled
+            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
+            '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
+            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature
         }
 
         # API calls
