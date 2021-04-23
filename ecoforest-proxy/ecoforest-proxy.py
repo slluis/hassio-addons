@@ -356,7 +356,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         if DEBUG: logging.debug('Request:\n%s' % (body))
         headers = { 'Content-Type': 'application/json' }
         try:
-            request = requests.post(ECOFOREST_URL, data=body, headers=headers, auth=HTTPBasicAuth(username, passwd), timeout=2.5)
+            request = requests.post(ECOFOREST_URL, data=body, headers=headers, auth=HTTPBasicAuth(username, passwd), timeout=10)
             if DEBUG: logging.debug('Request:\n%s' %(request.url))
             if DEBUG: logging.debug('Result:\n%s' %(request.text))
             return request
