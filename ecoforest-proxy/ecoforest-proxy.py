@@ -25,6 +25,7 @@ REGISTER_TYPE_ANALOG = 3
 heat_pump_registers_2001 = {
     61: { 'id':'pool_status', 't':REGISTER_TYPE_DIGITAL },
     105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
+    107: { 'id':'cooling_status', 't':REGISTER_TYPE_DIGITAL },
     190: { 'id':'dhw_recirculation_enabled', 't':REGISTER_TYPE_DIGITAL },
     206: { 'id':'direct_heating', 't':REGISTER_TYPE_DIGITAL },
     207: { 'id':'direct_cooling', 't':REGISTER_TYPE_DIGITAL },
@@ -236,12 +237,12 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     def ecoforest_stats_heatpump(self):
         # Status registers:
-        # digital: 105, 190, 206, 208, 210, 211, 249
+        # digital: 105, 107, 190, 206, 208, 210, 211, 249, 250
         # numbers: 5033, 5034, 5082, 5083, 5290, 97, 1, 2, 3, 4, 8, 11, 13, 14
 
-        self.ecoforest_query_registers(2001, 105, 1)
+        self.ecoforest_query_registers(2001, 105, 3)
         self.ecoforest_query_registers(2001, 190, 22)
-        self.ecoforest_query_registers(2001, 249, 1)
+        self.ecoforest_query_registers(2001, 249, 2)
         self.ecoforest_query_registers(2002, 5033, 2)
         self.ecoforest_query_registers(2002, 5082, 10)
         self.ecoforest_query_registers(2002, 5271, 20)
@@ -311,6 +312,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
     def heating_status(self, post_body=None):
         self.handle_switch('heating_status', post_body)
 
+    def cooling_status(self, post_body=None):
+        self.handle_switch('cooling_status', post_body)
+
     def dhw_recirculation_enabled(self, post_body=None):
         self.handle_switch('dhw_recirculation_enabled', post_body)
 
@@ -377,6 +381,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         dispatch = {
             '/ecoforest/status': self.set_status,
             '/ecoforest/heating_status': self.heating_status,
+            '/ecoforest/cooling_status': self.cooling_status,
             '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
             '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
             '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature
@@ -408,6 +413,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/set_temp': self.set_temp,
             '/ecoforest/set_power': self.set_power,
             '/ecoforest/heating_status': self.heating_status,
+            '/ecoforest/cooling_status': self.cooling_status,
             '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
             '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
             '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature
