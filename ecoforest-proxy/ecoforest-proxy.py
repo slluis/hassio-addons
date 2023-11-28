@@ -238,7 +238,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
     def ecoforest_stats_heatpump(self):
         # Status registers:
         # digital: 105, 107, 190, 206, 208, 210, 211, 249, 250
-        # numbers: 5033, 5034, 5082, 5083, 5290, 97, 1, 2, 3, 4, 8, 11, 13, 14
+        # numbers: 5033, 5034, 5082, 5083, 5290, 97, 1, 2, 3, 4, 8, 11, 13, 14, 97, 200, 201
 
         self.ecoforest_query_registers(2001, 105, 3)
         self.ecoforest_query_registers(2001, 190, 22)
@@ -248,6 +248,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         self.ecoforest_query_registers(2002, 5271, 20)
         self.ecoforest_query_registers(2002, 1, 17)
         self.ecoforest_query_registers(2002, 97, 1)
+        self.ecoforest_query_registers(2002, 200, 2)
 
         return EcoforestServer.current_hp_data
 
