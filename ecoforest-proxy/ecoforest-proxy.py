@@ -24,6 +24,7 @@ REGISTER_TYPE_ANALOG = 3
 
 heat_pump_registers_2001 = {
     61: { 'id':'pool_status', 't':REGISTER_TYPE_DIGITAL },
+    83: { 'id':'reset_alarms', 't':REGISTER_TYPE_DIGITAL },
     105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
     107: { 'id':'cooling_status', 't':REGISTER_TYPE_DIGITAL },
     190: { 'id':'dhw_recirculation_enabled', 't':REGISTER_TYPE_DIGITAL },
@@ -101,6 +102,51 @@ heat_pump_registers_2002 = {
     5290: { 'id':'status', 't':REGISTER_TYPE_INTEGER }, # 0:off, 1:on, 2:alarm
 }
 
+heat_pump_alarms = {
+    1: {"text": "Fallo en reloj interno"},
+    2: {"text": "Fallo en memoria extendida"},
+    3: {"text": "Fuentes no disponibles"},
+    7: {"text": "Fallo sonda presión descarga compresor"},
+    8: {"text": "Fallo sonda temperatura impulsión captación"},
+    9: {"text": "Fallo sonda temperatura retorno captación"},
+    10: {"text": "Fallo sonda presión captación"},
+    11: {"text": "Fallo sonda temperatura impulsión producción"},
+    12: {"text": "Fallo sonda temperatura retorno producción"},
+    13: {"text": "Fallo sonda presión producción"},
+    14: {"text": "Fallo sonda temperatura"},
+    15: {"ref": 14},
+    16: {"ref": 14},
+    214: {"ref": 14},
+    215: {"ref": 14},
+    217: {"ref": 14},
+    17: {"text": "Temperatura captación baja"},
+    21: {"ref": 17},
+    18: {"text": "Presión descarga compresor alta"},
+    19: {"text": "Temperatura descarga compresor alta"},
+    20: {"text": "Temperatura inverter alta"},
+    25: {"text": "Presión captación baja"},
+    26: {"text": "Presión producción baja"},
+    34: {"text": "Presión aspiración compresor baja"},
+    39: {"ref": 34},
+    36: {"text": "Fallo sonda presión aspiración compresor"},
+    37: {"text": "Fallo sonda temperatura aspiración compresor"},
+    38: {"text": "Recalentamiento aspiración bajo (lowSH)"},
+    40: {"text": "Temperatura evaporación alta (MOP)"},
+    41: {"text": "Temperatura aspiración compresor baja"},
+    212: {"text": "Fallo comunicación inverter"},
+    213: {"text": "Temperatura captación alta"},
+    218: {"text": "Fallo comunicación pCOe"},
+    219: {"text": "Fallo Terminal SG1"},
+    220: {"text": "Fallo comunicación Terminal SG1"},
+    221: {"text": "Fallo Terminal SG2"},
+    222: {"text": "Fallo comunicación Terminal SG2"},
+    223: {"text": "Fallo Terminal SG3"},
+    224: {"text": "Fallo comunicación Terminal SG3"},
+    225: {"text": "Fallo Terminal SG4"},
+    226: {"text": "Fallo comunicación Terminal SG4"},
+    33: {"text": "Caudal evaporador bajo"}
+}
+
 if DEBUG:
     FORMAT = '%(asctime)-0s %(levelname)s %(message)s [at line %(lineno)d]'
     logging.basicConfig(level=logging.DEBUG, format=FORMAT, datefmt='%Y-%m-%dT%I:%M:%S')
@@ -119,7 +165,6 @@ class EcoforestServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
             self.wfile.flush()
-            self.wfile.close()
         except:
             self.send_error(500, 'Something went wrong here on the server side.')
 
@@ -136,6 +181,13 @@ class EcoforestServer(BaseHTTPRequestHandler):
         else:
             self.send_error(500, 'Something went wrong here on the server side.')
 
+    def get_alarm_text(self,index):
+        reg = heat_pump_alarms[index]
+        if 'ref' in reg:
+            ref = reg['ref']
+            return self.get_alarm_text(ref)
+        else:
+            return reg['text']
 
     def set_status(self, status):
         if DEBUG: logging.debug('SET STATUS: %s' % (status))
@@ -237,11 +289,13 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     def ecoforest_stats_heatpump(self):
         # Status registers:
-        # digital: 105, 107, 190, 206, 208, 210, 211, 249, 250
+        # digital: 0-42, 83, 105, 107, 190, 206, 208, 210, 211, 249, 250
         # numbers: 5033, 5034, 5082, 5083, 5290, 97, 1, 2, 3, 4, 8, 11, 13, 14, 97, 200, 201
 
-        self.ecoforest_query_registers(2001, 105, 3)
-        self.ecoforest_query_registers(2001, 190, 22)
+        EcoforestServer.current_hp_data['alarms'] = ""
+
+        self.ecoforest_query_registers(2001, 1, 107)
+        self.ecoforest_query_registers(2001, 190, 37)
         self.ecoforest_query_registers(2001, 249, 2)
         self.ecoforest_query_registers(2002, 5033, 2)
         self.ecoforest_query_registers(2002, 5082, 10)
@@ -260,6 +314,8 @@ class EcoforestServer(BaseHTTPRequestHandler):
         heat_pump_registers = heat_pump_registers_2001 if oper == 2001 else heat_pump_registers_2002
         for i in range(2,len(data)):
             regid = ini + i - 2
+            if regid in heat_pump_alarms and oper == 2001 and data[i]=='1':
+                self.store_alarm(regid,data[i])
             if regid in heat_pump_registers:
                 reg = heat_pump_registers[regid]
                 dict[reg['id']] = self.convert_register_value(data[i],reg['t'])
@@ -275,6 +331,11 @@ class EcoforestServer(BaseHTTPRequestHandler):
             return val/10 if val <= 32768 else (val - 65536) / 10
         else:
             return 0
+
+    def store_alarm(self,regid,value):
+        dict = EcoforestServer.current_hp_data
+        alarm = self.get_alarm_text(regid)
+        dict['alarms'] += alarm + "\n"
 
     def convert_to_register_value(self,value,rtype):
         if rtype == REGISTER_TYPE_DIGITAL:
@@ -318,6 +379,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     def dhw_recirculation_enabled(self, post_body=None):
         self.handle_switch('dhw_recirculation_enabled', post_body)
+
+    def reset_alarms(self, post_body=None):
+        self.handle_switch('reset_alarms', post_body)
 
     def dhw_set_temperature(self, post_body=None):
         self.handle_sensor('dhw_set_temperature', post_body)
@@ -385,7 +449,8 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/cooling_status': self.cooling_status,
             '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
             '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
-            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature
+            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature,
+            '/ecoforest/reset_alarms': self.reset_alarms
         }
 
         # API calls
@@ -417,7 +482,8 @@ class EcoforestServer(BaseHTTPRequestHandler):
             '/ecoforest/cooling_status': self.cooling_status,
             '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
             '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
-            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature
+            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature,
+            '/ecoforest/reset_alarms': self.reset_alarms
         }
 
         # API calls
