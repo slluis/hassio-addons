@@ -1,5 +1,7 @@
 import sys, logging, datetime, urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse, json, requests, urllib.parse
 import urllib3
+import signal
+import threading
 
 from os import curdir, sep
 from http.server import BaseHTTPRequestHandler
@@ -31,7 +33,7 @@ heat_pump_registers_2001 = {
     83: { 'id':'reset_alarms', 't':REGISTER_TYPE_DIGITAL },
     105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
     107: { 'id':'cooling_status', 't':REGISTER_TYPE_DIGITAL },
-    190: { 'id':'dhw_recirculation_enabled', 't':REGISTER_TYPE_DIGITAL },
+    1535: { 'id':'dhw_recirculation_enabled', 't':REGISTER_TYPE_DIGITAL },
     206: { 'id':'direct_heating', 't':REGISTER_TYPE_DIGITAL },
     207: { 'id':'direct_cooling', 't':REGISTER_TYPE_DIGITAL },
     208: { 'id':'dhw_demand', 't':REGISTER_TYPE_DIGITAL },
@@ -609,7 +611,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         self.handle_sensor('dhw_offset_temperature', post_body)
 
     def handle_switch(self, register, post_body):
-        current_status = 'on' if self.get_status_value(register) == 1 else 'off'
+        current_status = 'on' if self.get_status_value(register, False) == 1 else 'off'
         if post_body:
             data = json.loads(post_body.decode('utf-8'))
             status = data['status']
@@ -639,7 +641,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
 
     # queries the ecoforest server with the supplied contents and parses the results into JSON
     def ecoforest_call(self, body):
-        if DEBUG: logging.debug('Request:\n%s' % (body))
+        if DEBUG: logging.debug('Body:\n%s' % (body))
         headers = { 'Content-Type': 'application/json' }
         try:
             if DEBUG: logging.debug('Request:\n%s' %(ECOFOREST_URL))
@@ -849,6 +851,34 @@ class EcoforestServer(BaseHTTPRequestHandler):
                 
         return
 
+    def do_POST(self):
+        parsed_path = urllib.parse.urlparse(self.path)
+        args = dict()
+        if parsed_path.query:
+            args = dict(qc.split("=") for qc in parsed_path.query.split("&"))
+
+        if DEBUG: logging.debug('POST: TARGET URL: %s, %s' % (parsed_path.path, parsed_path.query))
+        content_len = int(self.headers.get('content-length', 0))
+        post_body = self.rfile.read(content_len)
+
+        dispatch = {
+            '/ecoforest/status': self.set_status,
+            '/ecoforest/heating_status': self.heating_status,
+            '/ecoforest/cooling_status': self.cooling_status,
+            '/ecoforest/dhw_recirculation_enabled': self.dhw_recirculation_enabled,
+            '/ecoforest/dhw_set_temperature': self.dhw_set_temperature,
+            '/ecoforest/dhw_offset_temperature': self.dhw_offset_temperature,
+            '/ecoforest/reset_alarms': self.reset_alarms
+        }
+        # API calls
+        if parsed_path.path in dispatch:
+           # try:
+                dispatch[parsed_path.path](post_body, **args)
+           # except:
+          #      self.send_error(500, 'Something went wrong here on the server side.')
+        else:
+            self.send_error(404,'File Not Found: %s' % parsed_path.path)
+        return
 
 if __name__ == '__main__':
     try:
