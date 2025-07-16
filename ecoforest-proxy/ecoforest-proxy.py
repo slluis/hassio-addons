@@ -486,7 +486,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
             (26, 'dhw_setpoint_manual', 'temperature'),
             (27, 'dhw_offset', 'temperature'),
             (28, 'dhw_temperature', 'temperature'),
-            (29, 'dhw_recirculation_status', 'integer'),
+            (29, 'dhw_recirculation_enabled', 'integer'),
             (30, 'dhw_recirculation_setpoint', 'temperature'),
             (31, 'dhw_recirculation_temp', 'temperature'),
             (32, 'dhw_recirculation_offset', 'temperature'),
@@ -616,10 +616,10 @@ class EcoforestServer(BaseHTTPRequestHandler):
             data = json.loads(post_body.decode('utf-8'))
             status = data['status']
             if status == "on" and current_status == 'off':
-                logging.info(register + ' enabled')
+                logging.debug(register + ' enabled')
                 self.set_status_value(register, 1)
             elif status == "off" and current_status == 'on':
-                logging.info(register + ' disabled')
+                logging.debug(register + ' disabled')
                 self.set_status_value(register, 0)
             current_status = status
         self.send({'status':current_status})
