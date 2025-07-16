@@ -2,6 +2,7 @@ import sys, logging, datetime, urllib.request, urllib.parse, urllib.error, urlli
 import urllib3
 import signal
 import threading
+import os
 
 from os import curdir, sep
 from http.server import BaseHTTPRequestHandler
@@ -10,8 +11,39 @@ from requests.auth import HTTPBasicAuth
 # Disable SSL warnings for unverified HTTPS requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# configuration
-jdata = json.load(open('/data/options.json'))
+# configuration - try local data.json first, then fall back to Home Assistant addon options
+def load_configuration():
+    """Load configuration from either local data.json or Home Assistant addon options.json"""
+    local_config_path = 'data.json'
+    addon_config_path = '/data/options.json'
+    
+    if os.path.exists(local_config_path):
+        config_path = local_config_path
+        print(f'Loading configuration from local file: {config_path}')
+    elif os.path.exists(addon_config_path):
+        config_path = addon_config_path
+        print(f'Loading configuration from Home Assistant addon: {config_path}')
+    else:
+        # Fall back to local file even if it doesn't exist for better error messages
+        config_path = local_config_path
+        print(f'Warning: Neither {local_config_path} nor {addon_config_path} found, attempting {local_config_path}')
+    
+    try:
+        with open(config_path, 'r') as config_file:
+            config_data = json.load(config_file)
+            print(f'Successfully loaded configuration from {config_path}')
+            return config_data
+    except FileNotFoundError:
+        print(f'Error: Configuration file {config_path} not found')
+        raise
+    except json.JSONDecodeError as e:
+        print(f'Error: Invalid JSON in configuration file {config_path}: {e}')
+        raise
+    except Exception as e:
+        print(f'Error: Failed to load configuration from {config_path}: {e}')
+        raise
+
+jdata = load_configuration()
 
 DEBUG = bool(jdata['debug'])
 DEFAULT_PORT = int(jdata['proxy_port'])
@@ -33,13 +65,12 @@ heat_pump_registers_2001 = {
     83: { 'id':'reset_alarms', 't':REGISTER_TYPE_DIGITAL },
     105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
     107: { 'id':'cooling_status', 't':REGISTER_TYPE_DIGITAL },
-    1535: { 'id':'dhw_recirculation_enabled', 't':REGISTER_TYPE_DIGITAL },
+    1535: { 'id':'dhw_recirculation_status', 't':REGISTER_TYPE_DIGITAL },
     206: { 'id':'direct_heating', 't':REGISTER_TYPE_DIGITAL },
     207: { 'id':'direct_cooling', 't':REGISTER_TYPE_DIGITAL },
     208: { 'id':'dhw_demand', 't':REGISTER_TYPE_DIGITAL },
     209: { 'id':'pool_demand', 't':REGISTER_TYPE_DIGITAL },
     210: { 'id':'htr_status', 't':REGISTER_TYPE_DIGITAL },
-    211: { 'id':'dhw_recirculation_status', 't':REGISTER_TYPE_DIGITAL },
     249: { 'id':'buffer_heating', 't':REGISTER_TYPE_DIGITAL },
     250: { 'id':'buffer_cooling', 't':REGISTER_TYPE_DIGITAL },
 }
@@ -486,7 +517,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
             (26, 'dhw_setpoint_manual', 'temperature'),
             (27, 'dhw_offset', 'temperature'),
             (28, 'dhw_temperature', 'temperature'),
-            (29, 'dhw_recirculation_enabled', 'integer'),
+            (29, 'dhw_recirculation_status', 'integer'),
             (30, 'dhw_recirculation_setpoint', 'temperature'),
             (31, 'dhw_recirculation_temp', 'temperature'),
             (32, 'dhw_recirculation_offset', 'temperature'),
@@ -599,7 +630,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         self.handle_switch('cooling_status', post_body)
 
     def dhw_recirculation_enabled(self, post_body=None):
-        self.handle_switch('dhw_recirculation_enabled', post_body)
+        self.handle_switch('dhw_recirculation_status', post_body)
 
     def reset_alarms(self, post_body=None):
         self.handle_switch('reset_alarms', post_body)
@@ -881,11 +912,51 @@ class EcoforestServer(BaseHTTPRequestHandler):
         return
 
 if __name__ == '__main__':
+    # Global server variable for signal handler
+    server = None
+    
+    def signal_handler(sig, frame):
+        """Handle shutdown signals gracefully"""
+        signal_name = 'SIGINT' if sig == signal.SIGINT else 'SIGTERM'
+        logging.info(f'Received {signal_name} signal. Shutting down server...')
+        if server:
+            # Stop the server in a separate thread to avoid blocking
+            shutdown_thread = threading.Thread(target=server.shutdown)
+            shutdown_thread.start()
+            shutdown_thread.join(timeout=5)  # Wait max 5 seconds
+            server.server_close()
+        logging.info('Server stopped.')
+        sys.exit(0)
+    
     try:
         from http.server import HTTPServer
         server = HTTPServer(('', DEFAULT_PORT), EcoforestServer)
+        
+        # Register signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+        signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+        
         logging.info('Ecoforest proxy server has started (' + heatertype + ')')
-        server.serve_forever()
+        logging.info(f'Server listening on port {DEFAULT_PORT}')
+        logging.info('Press Ctrl+C to stop the server')
+        
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            logging.info('Keyboard interrupt received. Shutting down...')
+            raise
+            
+    except KeyboardInterrupt:
+        logging.info('Server interrupted by user')
     except Exception as e:
-        logging.error(e)
+        logging.error(f'Server error: {e}')
         sys.exit(2)
+    finally:
+        if server:
+            try:
+                server.shutdown()
+                server.server_close()
+                logging.info('Server cleanup completed')
+            except:
+                pass  # Ignore cleanup errors
+        sys.exit(0)
