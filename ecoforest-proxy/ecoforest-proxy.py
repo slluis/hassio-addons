@@ -63,8 +63,8 @@ REGISTER_TYPE_ANALOG = 3
 heat_pump_registers_2001 = {
     61: { 'id':'pool_status', 't':REGISTER_TYPE_DIGITAL },
     83: { 'id':'reset_alarms', 't':REGISTER_TYPE_DIGITAL },
-    105: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
-    107: { 'id':'cooling_status', 't':REGISTER_TYPE_DIGITAL },
+    1524: { 'id':'heating_status', 't':REGISTER_TYPE_DIGITAL },
+    1568: { 'id':'cooling_status', 't':REGISTER_TYPE_DIGITAL },
     1535: { 'id':'dhw_recirculation_status', 't':REGISTER_TYPE_DIGITAL },
     206: { 'id':'direct_heating', 't':REGISTER_TYPE_DIGITAL },
     207: { 'id':'direct_cooling', 't':REGISTER_TYPE_DIGITAL },
@@ -334,6 +334,11 @@ class EcoforestServer(BaseHTTPRequestHandler):
         EcoforestServer.current_hp_data = {'alarms': ""}
         
         try:
+            # Get energy reference data first (operation 2113)
+            energy_ref_data = self.get_page_data_energy_reference()
+            if energy_ref_data:
+                EcoforestServer.current_hp_data.update(energy_ref_data)
+            
             # Get basic system data
             basic_data = self.get_page_data_basic()
             if basic_data:
@@ -441,7 +446,6 @@ class EcoforestServer(BaseHTTPRequestHandler):
         field_definitions = [
             # Status flags
             (0, 'heating_status', 'integer'),
-            (3, 'cooling_status', 'integer'),
             
             # Temperature values (all divided by 10)
             (1, 'heating_inlet_temperature', 'temperature'),
@@ -557,6 +561,16 @@ class EcoforestServer(BaseHTTPRequestHandler):
         field_definitions.extend(self._create_sequential_fields(29, 5, 'aux_', 'integer'))  # aux_1_status to aux_5_status
         
         return self.get_data_page(2152, field_definitions)
+
+    def get_page_data_energy_reference(self):
+        """Get energy reference data - equivalent to JavaScript actualizarpagina function (operation 2113)"""
+        field_definitions = [
+            # Based on the JavaScript code: eru = a[15].replace("ERU=", "")
+            # The eru value is extracted from index 15 and ERU= prefix is removed
+            (15, 'cooling_status', 'eru_string'),  # Energy reference value (ERU) with prefix removal
+        ]
+        
+        return self.get_data_page(2113, field_definitions)
 
     def ecoforest_query_registers(self,oper,ini,num):
         dict = EcoforestServer.current_hp_data
@@ -715,6 +729,12 @@ class EcoforestServer(BaseHTTPRequestHandler):
         elif field_type == 'time':
             val = int(data[index], 16)
             return self._format_time_component(val)
+        elif field_type == 'eru_string':
+            # Handle ERU string type - remove "ERU=" prefix if present
+            value = data[index]
+            if value.startswith('ERU='):
+                return value.replace('ERU=', '')
+            return value
         else:
             return int(data[index], 16)
 
@@ -733,9 +753,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
         Generic method to query ecoforest operations and parse data based on field definitions
         
         Args:
-            operation_id (int): The operation ID to query (e.g., 2148, 2149, 2150, 2151, 2152)
+            operation_id (int): The operation ID to query (e.g., 2113, 2148, 2149, 2150, 2151, 2152)
             field_definitions (list): List of tuples (index, field_name, field_type)
-                where field_type can be 'integer', 'temperature', 'time', or 'raw'
+                where field_type can be 'integer', 'temperature', 'time', 'eru_string', or 'raw'
         
         Returns:
             dict: Parsed data with field names as keys, or None if operation failed
