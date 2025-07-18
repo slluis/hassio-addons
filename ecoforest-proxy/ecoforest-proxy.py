@@ -388,13 +388,13 @@ class EcoforestServer(BaseHTTPRequestHandler):
         # Add specific fields for this operation
         field_definitions.extend([
             # Pressure values (divided by 10)
-            (18, 'brine_circuit_pressure', 'temperature'), # pcc
-            (20, 'production_circuit_pressure', 'temperature'), # pcp
+            (18, 'production_circuit_pressure', 'temperature'), # pcc
+            (20, 'brine_circuit_pressure', 'temperature'), # pcp
             
             # Temperature values (divided by 10)
             (19, 'production_inlet_temperature', 'temperature'), # trc
             (21, 'outdoor_temperature', 'temperature'),
-            (22, 'tic', 'temperature'),
+            (22, 'production_outlet_temperature', 'temperature'), # tic
             (23, 'brine_outlet_temperature', 'temperature'), # tip
             (24, 'brine_inlet_temperature', 'temperature'), # trp
             
@@ -581,20 +581,6 @@ class EcoforestServer(BaseHTTPRequestHandler):
         
         return self.get_data_page(2108, field_definitions)
 
-    def ecoforest_query_registers(self,oper,ini,num):
-        dict = EcoforestServer.current_hp_data
-        stats = self.ecoforest_call('idOperacion=' + str(oper) + '&dir=' + str(ini) + '&num=' + str(num))
-        lines = stats.text.split('\n')
-        data = lines[1].split('&')
-        heat_pump_registers = heat_pump_registers_2001 if oper == 2001 else heat_pump_registers_2002
-        for i in range(2,len(data)):
-            regid = ini + i - 2
-            if regid in heat_pump_alarms and oper == 2001 and data[i]=='1':
-                self.store_alarm(regid,data[i])
-            if regid in heat_pump_registers:
-                reg = heat_pump_registers[regid]
-                dict[reg['id']] = self.convert_register_value(data[i],reg['t'])
-
     def convert_register_value(self,value,rtype):
         if rtype == REGISTER_TYPE_DIGITAL:
             return int(value)
@@ -620,10 +606,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         elif rtype == REGISTER_TYPE_ANALOG:
             return format(int(value*10) if value >=0 else int(value * 10) + 65536, '04X')
 
-    def get_status_value(self,attribute,fetch=True):
-        if fetch:
-            oper,regid,rtype = self.get_attribute_data(attribute)
-            self.ecoforest_query_registers(oper, regid, 1)
+    def get_status_value(self,attribute):
         if attribute in EcoforestServer.current_hp_data:
             return EcoforestServer.current_hp_data[attribute]
         else:
@@ -665,7 +648,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         self.handle_sensor('dhw_offset_temperature', post_body)
 
     def handle_switch(self, register, post_body):
-        current_status = 'on' if self.get_status_value(register, False) == 1 else 'off'
+        current_status = 'on' if self.get_status_value(register) == 1 else 'off'
         if post_body:
             data = json.loads(post_body.decode('utf-8'))
             status = data['status']
