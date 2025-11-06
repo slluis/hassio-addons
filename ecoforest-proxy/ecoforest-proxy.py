@@ -139,49 +139,156 @@ heat_pump_registers_2002 = {
     5290: { 'id':'status', 't':REGISTER_TYPE_INTEGER }, # 0:off, 1:on, 2:alarm
 }
 
-heat_pump_alarms = {
-    1: {"text": "Fallo en reloj interno"},
-    2: {"text": "Fallo en memoria extendida"},
-    3: {"text": "Fuentes no disponibles"},
-    7: {"text": "Fallo sonda presión descarga compresor"},
-    8: {"text": "Fallo sonda temperatura impulsión captación"},
-    9: {"text": "Fallo sonda temperatura retorno captación"},
-    10: {"text": "Fallo sonda presión captación"},
-    11: {"text": "Fallo sonda temperatura impulsión producción"},
-    12: {"text": "Fallo sonda temperatura retorno producción"},
-    13: {"text": "Fallo sonda presión producción"},
-    14: {"text": "Fallo sonda temperatura"},
-    15: {"ref": 14},
-    16: {"ref": 14},
-    214: {"ref": 14},
-    215: {"ref": 14},
-    217: {"ref": 14},
-    17: {"text": "Temperatura captación baja"},
-    21: {"ref": 17},
-    18: {"text": "Presión descarga compresor alta"},
-    19: {"text": "Temperatura descarga compresor alta"},
-    20: {"text": "Temperatura inverter alta"},
-    25: {"text": "Presión captación baja"},
-    26: {"text": "Presión producción baja"},
-    34: {"text": "Presión aspiración compresor baja"},
-    39: {"ref": 34},
-    36: {"text": "Fallo sonda presión aspiración compresor"},
-    37: {"text": "Fallo sonda temperatura aspiración compresor"},
-    38: {"text": "Recalentamiento aspiración bajo (lowSH)"},
-    40: {"text": "Temperatura evaporación alta (MOP)"},
-    41: {"text": "Temperatura aspiración compresor baja"},
-    212: {"text": "Fallo comunicación inverter"},
-    213: {"text": "Temperatura captación alta"},
-    218: {"text": "Fallo comunicación pCOe"},
-    219: {"text": "Fallo Terminal SG1"},
-    220: {"text": "Fallo comunicación Terminal SG1"},
-    221: {"text": "Fallo Terminal SG2"},
-    222: {"text": "Fallo comunicación Terminal SG2"},
-    223: {"text": "Fallo Terminal SG3"},
-    224: {"text": "Fallo comunicación Terminal SG3"},
-    225: {"text": "Fallo Terminal SG4"},
-    226: {"text": "Fallo comunicación Terminal SG4"},
-    33: {"text": "Caudal evaporador bajo"}
+alarm_map = {
+    1: "Error configuración modelo",
+    2: "Error configuración modelo unidad exterior",
+    3: "Error configuración modelo unidad interior",
+    4: "Modo emergencia manual activado",
+    5: "Configuración incorrecta",
+    10: "Bomba de calor no disponible",
+    11: "Caldera no disponible",
+    12: "Resistencia no disponible",
+    13: "Resistencia ACS no disponible",
+    14: "Resistencia inercia no disponible",
+    15: "Enfriadora externa no disponible",
+    16: "Enfriadora externa no disponible",
+    20: "Servicio de ACS no disponible",
+    21: "Servicio de recirculación de ACS no disponible",
+    22: "Servicio de piscina no disponible",
+    23: "Servicio calefaccion no disponible",
+    24: "Servicio refrigeración activa no disponible",
+    25: "Servicio refrigeración pasiva no disponible",
+    30: "Grupo SG1 no disponible",
+    31: "Grupo SG2 no disponible",
+    32: "Grupo SG3 no disponible",
+    33: "Grupo SG4 no disponible",
+    34: "Grupo SG5 no disponible",
+    35: "Reset alarma",
+    40: "Alta presion descarga compresor",
+    41: "Baja presion aspiracion compresor",
+    42: "Alta temperatura descarga compresor",
+    43: "Temperatura evaporación alta",
+    44: "Baja temperatura de condensacion",
+    45: "Bajo grado de recalentamiento",
+    46: "Alto grado de recalentamiento",
+    50: "Alarma de Inverter",
+    51: "Parada de seguridad por flujostato/presostato",
+    52: "Inverter bloqueado (Apagar 2 min.)",
+    53: "Baja Tension",
+    54: "Error configuracion PowerPlus",
+    60: "Baja presion en circuito de pozos",
+    61: "Baja temperatura en circuito de pozos",
+    62: "Alta temperatura en circuito de pozos",
+    63: "Baja presión en circuito de producción",
+    64: "Baja temperatura exterior",
+    65: "Alta temperatura exterior",
+    66: "Bajo caudal en el evaporador",
+    67: "Fuentes fuera de rango",
+    68: "Fuga de refrigerante detectada",
+    70: "Error pCO: reloj / EEPROM",
+    71: "Error pCO: driver EEV",
+    72: "Alarma gestor de fuentes",
+    73: "Gestor de fuentes OFF",
+    80: "Sensor de presión de descarga roto o desconectado",
+    81: "Sensor de temperatura de descarga roto o desconectado",
+    82: "Sensor de presión de aspiración roto o desconectado",
+    83: "Sensor de temperatura de aspiración roto o desconectado",
+    84: "Sensor de presión intermedia roto o desconectado",
+    85: "Sensor de presión del circuito de pozos roto o desconectado",
+    86: "Sensor de temperatura de impulsión del circuito de pozos roto o desconectado",
+    87: "Sensor de temperatura de retorno del circuito de pozos roto o desconectado",
+    88: "Sensor de presión del circuito de producción roto o desconectado",
+    89: "Sensor de temperatura de impulsión del circuito de producción roto o desconectado",
+    90: "Sensor de temperatura de retorno del circuito de producción roto o desconectado",
+    91: "Sensor de temperatura del grupo SG1 roto o desconectado",
+    92: "Sensor de temperatura del grupo SG2 roto o desconectado",
+    93: "Sensor de temperatura del grupo SG3 roto o desconectado",
+    94: "Sensor de temperatura del grupo SG4 roto o desconectado",
+    95: "Sensor de temperatura del grupo SG5 roto o desconectado",
+    96: "Sensor de temperatura de ACS roto o desconectado",
+    97: "Sensor de temperatura de recirculación de ACS roto o desconectado",
+    98: "Sensor de temperatura de piscina roto o desconectado",
+    99: "Sensor de temperatura de inercia de calefacción roto o desconectado",
+    100: "Sensor de temperatura de inercia de refrigeración roto o desconectado",
+    101: "Sensor de temperatura exterior roto o desconectado",
+    102: "Sensor de temperatura de caldera roto o desconectado",
+    103: "Sensor de temperatura de salida del captador aerotérmico roto o desconectado",
+    104: "Sensor de temperatura de impulsión de circuito de producción 2 roto o desconectado",
+    105: "Sensor de temperatura de retorno de circuito de producción 2 roto o desconectado",
+    106: "Sensor de temperatura de salida del condensador roto o desconectado",
+    107: "Sensor de temperatura del acumulador solar roto o desconectado",
+    108: "Sensor de temperatura del acumulador de inercia roto y desconectado",
+    109: "Sensor de temperatura de enfriadora roto o desconectado",
+    110: "Sensor roto o desconectado",
+    111: "Sensor de presión del circuito de aceite roto o desconectado",
+    112: "Sensor de temperatura de salida del circuito de aceite roto o desconectado",
+    113: "Sensor de temperatura de entrada del circuito de aceite roto o desconectado",
+    114: "Sensor roto o desconectado",
+    115: "Sensor roto o desconectado",
+    116: "Fallo en sensor de refrigerante",
+    120: "Fallo termostato th-Tune 1",
+    121: "Fallo termostato th-Tune 2",
+    122: "Fallo termostato th-Tune 3",
+    123: "Fallo termostato th-Tune 4",
+    124: "Fallo termostato th-Tune 5",
+    130: "Fallo termostato th-T 1",
+    131: "Fallo termostato th-T 2",
+    132: "Fallo termostato th-T 3",
+    133: "Fallo termostato th-T 4",
+    134: "Fallo termostato th-T 5",
+    150: "Esclavos no disponibles",
+    151: "Alarma en bomba de calor 1",
+    152: "Alarma en bomba de calor 2",
+    153: "Alarma en bomba de calor 3",
+    154: "Alarma en bomba de calor 4",
+    155: "Alarma en bomba de calor 5",
+    156: "Alarma en bomba de calor 6",
+    160: "pCOe 1 offline",
+    161: "pCOe 2 offline",
+    162: "Inverter offline",
+    163: "Cascada offline",
+    164: "e-Manager offline",
+    165: "Gestor de fuentes offline",
+    166: "Unidad Exterior offline",
+    167: "EVD offline",
+    168: "Grid Meter offline",
+    169: "cpCOe1 offline",
+    170: "cpCOe2 offline",
+    171: "Bomba de calor offline",
+    172: "Bomba de calor 1 offline",
+    173: "Bomba de calor 2 offline",
+    174: "Bomba de calor 3 offline",
+    175: "Bomba de calor 4 offline",
+    176: "Bomba de calor 5 offline",
+    177: "Bomba de calor 6 offline",
+    178: "Sensor de temperatura exterior BUS offline",
+    180: "Termostato th-Tune 1 offline",
+    181: "Termostato th-Tune 2 offline",
+    182: "Termostato th-Tune 3 offline",
+    183: "Termostato th-Tune 4 offline",
+    184: "Termostato th-Tune 5 offline",
+    190: "Termostato th-T 1 offline",
+    191: "Termostato th-T 2 offline",
+    192: "Termostato th-T 3 offline",
+    193: "Termostato th-T 4 offline",
+    194: "Termostato th-T 5 offline",
+    210: "Sensor de refrigerante offline",
+    220: "Servicio de Legionella fallido",
+    221: "Proceso de desescarche fallido",
+    230: "Fallo servicio ACS",
+    231: "Fallo servicio piscina",
+    232: "Fallo servicio calefacción",
+    233: "Fallo servicio refrigeración activa",
+    234: "Fallo servicio refrigeración pasiva",
+    240: "Conflicto demandas calor/frio SG1",
+    241: "Conflicto demandas calor/frio SG2",
+    242: "Conflicto demandas calor/frio SG3",
+    243: "Conflicto demandas calor/frio SG4",
+    244: "Conflicto demandas calor/frio SG5",
+    250: "Aviso de baja presión en el circuito de pozos",
+    251: "Aviso de baja presión en el circuito de producción",
+    252: "Aviso de alta presión en el circuito de pozos",
+    253: "Aviso de alta presión en el circuito de producción"
 }
 
 if DEBUG:
@@ -217,14 +324,6 @@ class EcoforestServer(BaseHTTPRequestHandler):
             self.send(stats)
         else:
             self.send_error(500, 'Something went wrong here on the server side.')
-
-    def get_alarm_text(self,index):
-        reg = heat_pump_alarms[index]
-        if 'ref' in reg:
-            ref = reg['ref']
-            return self.get_alarm_text(ref)
-        else:
-            return reg['text']
 
     def set_status(self, status):
         if DEBUG: logging.debug('SET STATUS: %s' % (status))
@@ -330,9 +429,6 @@ class EcoforestServer(BaseHTTPRequestHandler):
         """
         if DEBUG: logging.debug('Getting comprehensive heat pump stats')
         
-        # Initialize the data dictionary with alarms
-        EcoforestServer.current_hp_data = {'alarms': ""}
-        
         try:
             # Get energy reference data first (operation 2113)
             energy_ref_data = self.get_page_data_cooling()
@@ -367,6 +463,9 @@ class EcoforestServer(BaseHTTPRequestHandler):
             config_data = self.get_page_data_system_config()
             if config_data:
                 EcoforestServer.current_hp_data.update(config_data)
+
+            alarm_data = self.get_page_alarms()
+            EcoforestServer.current_hp_data['alarms'] = alarm_data
                 
         except Exception as e:
             if DEBUG:
@@ -581,6 +680,40 @@ class EcoforestServer(BaseHTTPRequestHandler):
         
         return self.get_data_page(2108, field_definitions)
 
+    def get_page_alarms(self):
+        field_definitions = [
+            (30, 'rarb', 'key_value_integer'),
+            (25, 'activa1', 'key_value_integer'),
+            (26, 'activa2', 'key_value_integer'),
+            (27, 'activa3', 'key_value_integer'),
+            (28, 'activa4', 'key_value_integer'),
+            (29, 'activa5', 'key_value_integer'),
+            (22, 'bloqueo', 'key_value_integer'),
+            (23, 'duracion', 'key_value_integer'),
+            (24, 'recurrencia', 'key_value_integer'),
+        ]
+   
+        data = self.get_data_page(2135, field_definitions)
+        
+        if data:
+             # Get the alarm field names
+            alarm_fields = ['activa1', 'activa2', 'activa3', 'activa4', 'activa5', 'bloqueo', 'duracion', 'recurrencia']
+            alarm_descriptions = []
+            
+            # Look up each alarm index in the alarm_map
+            for field in alarm_fields:
+                alarm_index = data.get(field, 0)
+                # Skip if index is 0
+                if alarm_index != 0 and alarm_index in alarm_map:
+                    alarm_descriptions.append(alarm_map[alarm_index])
+       
+            # Concatenate with newlines
+            alarm_string = '\n'.join(alarm_descriptions)
+   
+            return alarm_string
+
+        return ""
+
     def convert_register_value(self,value,rtype):
         if rtype == REGISTER_TYPE_DIGITAL:
             return int(value)
@@ -592,11 +725,6 @@ class EcoforestServer(BaseHTTPRequestHandler):
             return val/10 if val <= 32768 else (val - 65536) / 10
         else:
             return 0
-
-    def store_alarm(self,regid,value):
-        dict = EcoforestServer.current_hp_data
-        alarm = self.get_alarm_text(regid)
-        dict['alarms'] += alarm + "\n"
 
     def convert_to_register_value(self,value,rtype):
         if rtype == REGISTER_TYPE_DIGITAL:
@@ -725,10 +853,10 @@ class EcoforestServer(BaseHTTPRequestHandler):
             # Handle key=value format - extract integer value after "="
             value = data[index]
             if '=' in value:
-                return int(value.split('=')[1])
-            return int(value)
+                return self._parse_hex_integer(value.split('=')[1])
+            return self._parse_hex_integer(value)
         else:
-            return int(data[index], 16)
+            return self._parse_hex_integer(data[index])
 
     def eliminar_errores(self, data_lines):
         """Remove lines containing 'error' from the data, equivalent to JavaScript eliminarErrores function"""
