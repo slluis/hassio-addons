@@ -465,7 +465,8 @@ class EcoforestServer(BaseHTTPRequestHandler):
                 EcoforestServer.current_hp_data.update(config_data)
 
             alarm_data = self.get_page_alarms()
-            EcoforestServer.current_hp_data['alarms'] = alarm_data
+            if alarm_data:
+                EcoforestServer.current_hp_data.update(alarm_data)
                 
         except Exception as e:
             if DEBUG:
@@ -696,23 +697,28 @@ class EcoforestServer(BaseHTTPRequestHandler):
         data = self.get_data_page(2135, field_definitions)
         
         if data:
-             # Get the alarm field names
-            alarm_fields = ['activa1', 'activa2', 'activa3', 'activa4', 'activa5', 'bloqueo', 'duracion', 'recurrencia']
+            # Build human readable alarm description list (active alarms only)
+            alarm_fields = ['activa1', 'activa2', 'activa3', 'activa4', 'activa5']
             alarm_descriptions = []
-            
-            # Look up each alarm index in the alarm_map
             for field in alarm_fields:
                 alarm_index = data.get(field, 0)
-                # Skip if index is 0
                 if alarm_index != 0 and alarm_index in alarm_map:
                     alarm_descriptions.append(alarm_map[alarm_index])
-       
-            # Concatenate with newlines
             alarm_string = '\n'.join(alarm_descriptions)
-   
-            return alarm_string
 
-        return ""
+            # Map bloque, duracion, recurrencia indices to text (empty string if no mapping / zero)
+            bloque_idx = data.get('bloqueo', 0)
+            duracion_idx = data.get('duracion', 0)
+            recurrencia_idx = data.get('recurrencia', 0)
+
+            return {
+                'alarms': alarm_string,
+                'alarms_block': alarm_map.get(bloque_idx, '') if bloque_idx else '',
+                'alarms_duration': alarm_map.get(duracion_idx, '') if duracion_idx else '',
+                'alarms_recurrent': alarm_map.get(recurrencia_idx, '') if recurrencia_idx else ''
+            }
+
+        return {}
 
     def convert_register_value(self,value,rtype):
         if rtype == REGISTER_TYPE_DIGITAL:
