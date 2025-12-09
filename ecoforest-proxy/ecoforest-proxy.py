@@ -698,7 +698,7 @@ class EcoforestServer(BaseHTTPRequestHandler):
         
         if data:
             # Build human readable alarm description list (active alarms only)
-            alarm_fields = ['activa1', 'activa2', 'activa3', 'activa4', 'activa5']
+            alarm_fields = ['activa1', 'activa2', 'activa3', 'activa4', 'activa5', 'bloqueo']
             alarm_descriptions = []
             for field in alarm_fields:
                 alarm_index = data.get(field, 0)
